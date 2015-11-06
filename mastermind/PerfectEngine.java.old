@@ -1,0 +1,125 @@
+import java.util.*;
+
+public class PerfectEngine implements GuessEngine {
+    private List<Code> codes;
+    private Code newGuess;
+    private Code[] oldGuesses;
+    private Reply[] oldReplies; 
+    int guessCount;
+
+    public PerfectEngine() {
+	    oldGuesses = new Code[10];
+	    oldReplies = new Reply[10];
+    }
+				
+    public void init() { 
+	    guessCount = 0;
+	    codes = new LinkedList<Code>();
+	    Color[] cols = new Color[4];
+	    for (Color c0 : Color.values())
+	        for (Color c1 : Color.values())
+		    for (Color c2 : Color.values())
+		        for (Color c3 : Color.values()) {
+			    cols[0] = c0;
+			    cols[1] = c1;
+			    cols[2] = c2;
+			    cols[3] = c3;
+			    codes.add(new Code(cols));
+		    }
+	    int index = (int)(Math.random()*codes.size());
+	    newGuess = codes.remove(index);
+    }
+
+    public void answerNewGuess(Reply reply)  throws ContradictionException{
+	    oldGuesses[guessCount] = newGuess;
+        oldReplies[guessCount] = reply;
+	    guessCount++;
+	    filterCodes(reply);
+	    int s = codes.size();
+	    if (s==0) 
+	        throw new ContradictionException("No solution");
+	    else {
+			int index = (int)(Math.random()*s);
+	        newGuess = codes.remove(index);
+	    }
+    }
+
+
+    private void filterCodes(Reply r) {
+		for(int i=codes.size()-1; i>=0; i--) {
+			int cows = 0;
+			int bulls = 0;
+			Code tempCode = codes.get(i);
+			List<Integer> skipIndex = new ArrayList<Integer>();
+			for(int j=0; j<4; j++) {
+				if(newGuess.getColor(j) == tempCode.getColor(j)) {
+					bulls++;
+					skipIndex.add(j);
+				} else {
+					for(int k=0; k<4; k++) {
+						if(!skipIndex.contains(new Integer(k))) {
+							if(newGuess.getColor(j) == tempCode.getColor(k)) {
+								if(newGuess.getColor(k) != tempCode.getColor(k)) {
+									cows++;
+									skipIndex.add(k);
+									break;	
+								}
+							}
+						}
+					}
+				}
+			}
+			if(cows != r.getCows() ||  bulls != r.getBulls()) {
+				codes.remove(i);
+			}
+
+		}
+    }
+
+    public Code getNewGuess() {return newGuess;}
+
+    public String explainContradiction(Code secret) {
+		if(codes.contains(secret)) {
+			return "I made a bad guess";
+		}
+		for(int i=0; i<guessCount; i++) {
+			int cows = 0;
+			int bulls = 0;
+			Code tempCode = oldGuesses[i];
+			List<Integer> skipIndex = new ArrayList<Integer>();
+			for(int j=0; j<4; j++) {
+				if(secret.getColor(j) == tempCode.getColor(j)) {
+					bulls++;
+					skipIndex.add(j);
+				} else {
+					for(int k=0; k<4; k++) {
+						if(!skipIndex.contains(new Integer(k))) {
+							if(secret.getColor(j) == tempCode.getColor(k)) {
+								if(secret.getColor(k) != tempCode.getColor(k)) {
+									cows++;
+									skipIndex.add(k);
+									break;	
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if(cows != oldReplies[i].getCows() || bulls != oldReplies[i].getBulls()) {
+				return "Guess " + (i+1) + " gave wrong reply. Should have given " + bulls + " Bulls and " + cows + " Cows." ;
+			}
+		}
+
+	    
+		return "Sorry, I cannot explain."; 
+    }
+
+    public boolean moreGuessesAllowed() {return guessCount < oldGuesses.length;}
+
+    public int oldGuesses() {return guessCount;}
+
+    public Code getOldGuess(int i) {return oldGuesses[i];}
+
+    public Reply getOldReply(int i) {return oldReplies[i];}
+}
